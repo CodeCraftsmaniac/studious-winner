@@ -1323,7 +1323,7 @@ function render() {
             <div class="flex flex-col items-center text-center py-4">
                 <!-- Header Icon -->
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-500/25 flex-shrink-0 text-white">
+                    <div class="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-500/25 flex-shrink-0 text-white" style="background: linear-gradient(to bottom right, #14b8a6, #06b6d4);">
                         ${SVG_ICONS.clock}
                     </div>
                     <div class="text-left">
@@ -1342,7 +1342,7 @@ function render() {
                     <div class="relative w-full">
                         <div class="w-full bg-gray-50 rounded-2xl flex items-center transition-all shadow-sm hover:shadow-md focus-within:shadow-lg focus-within:bg-white focus-within:ring-2 focus-within:ring-teal-400/50 overflow-hidden">
                             <div class="pl-4 pr-3 flex-shrink-0">
-                                <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center text-white shadow-md">
+                                <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center text-white shadow-md" style="background: linear-gradient(to bottom right, #14b8a6, #06b6d4);">
                                     ${SVG_ICONS.idCard}
                                 </div>
                             </div>
@@ -1375,7 +1375,7 @@ function render() {
                         ${state.loading || state.nsuId.length < 7 ? 'disabled' : ''}
                         class="relative w-full py-3 rounded-xl font-bold text-base text-white shadow-lg overflow-hidden group transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${state.loading ? 'cursor-wait' : ''}"
                     >
-                        <div class="absolute inset-0 bg-gradient-to-r from-teal-500 via-cyan-500 to-orange-500"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-teal-500 via-cyan-500 to-orange-500" style="background: linear-gradient(to right, #14b8a6, #06b6d4, #f97316);"></div>
                         <span class="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
                             ${state.loading ? `
                                 <span class="nsunexus-inline-loader"></span>

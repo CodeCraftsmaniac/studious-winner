@@ -49,28 +49,28 @@ let statsState = {
 // ============================================
 function animateValue(element, start, end, duration = 300) {
     if (start === end) return;
-    
+
     const range = end - start;
     const startTime = performance.now();
-    
+
     // Add rising animation class
     element.classList.add('rising', 'glow');
-    
+
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        
+
         // Easing function for smooth animation
         const easeOutQuart = 1 - Math.pow(1 - progress, 4);
         const current = Math.round(start + (range * easeOutQuart));
-        
+
         // Check if this is the accuracy element
         if (element.id === 'statAccuracy') {
             element.textContent = current + '%';
         } else {
             element.textContent = current.toLocaleString();
         }
-        
+
         if (progress < 1) {
             requestAnimationFrame(update);
         } else {
@@ -80,7 +80,7 @@ function animateValue(element, start, end, duration = 300) {
             }, 150);
         }
     }
-    
+
     requestAnimationFrame(update);
 }
 
@@ -91,15 +91,28 @@ let statsSubscription = null;
 
 async function fetchInitialStats() {
     try {
-        const { data, error } = await supabase
+        // Fetch total searches from analytics
+        const { data: analyticsData, error: analyticsError } = await supabase
             .from('advising_search_analytics')
-            .select('total_searches, valid_searches, invalid_searches')
+            .select('total_searches')
             .single();
-        
-        if (error) throw error;
-        
-        if (data) {
-            updateStatsDisplay(data.total_searches, data.valid_searches, data.invalid_searches);
+
+        if (analyticsError) throw analyticsError;
+
+        // Fetch unique student IDs where found = true
+        const { data: logsData, error: logsError } = await supabase
+            .from('advising_search_logs')
+            .select('student_id')
+            .eq('found', true);
+
+        if (logsError) throw logsError;
+
+        // Count unique student IDs
+        const uniqueIds = new Set(logsData.map(row => row.student_id));
+        const uniqueCount = uniqueIds.size;
+
+        if (analyticsData) {
+            updateStatsDisplay(analyticsData.total_searches, uniqueCount, 0);
         }
     } catch (err) {
         console.log('Stats fetch error:', err);
@@ -110,23 +123,23 @@ function updateStatsDisplay(total, valid, invalid) {
     const totalEl = document.getElementById('statTotal');
     const validEl = document.getElementById('statValid');
     const accuracyEl = document.getElementById('statAccuracy');
-    
+
     if (!totalEl || !validEl || !accuracyEl) return;
-    
+
     // Accuracy is always 100%
     const accuracy = 100;
-    
+
     // Animate each value if changed
     if (statsState.total !== total) {
         animateValue(totalEl, statsState.total, total);
         statsState.total = total;
     }
-    
+
     if (statsState.valid !== valid) {
         animateValue(validEl, statsState.valid, valid);
         statsState.valid = valid;
     }
-    
+
     // Accuracy stays at 100%
     if (statsState.accuracy !== accuracy) {
         animateValue(accuracyEl, statsState.accuracy, accuracy);
@@ -145,14 +158,26 @@ function subscribeToStats() {
                 schema: 'public',
                 table: 'advising_search_analytics'
             },
-            (payload) => {
+            async (payload) => {
                 console.log('Stats update received:', payload);
                 if (payload.new) {
-                    updateStatsDisplay(
-                        payload.new.total_searches,
-                        payload.new.valid_searches,
-                        payload.new.invalid_searches
-                    );
+                    // Re-fetch unique IDs count when analytics updates
+                    try {
+                        const { data: logsData, error: logsError } = await supabase
+                            .from('advising_search_logs')
+                            .select('student_id')
+                            .eq('found', true);
+
+                        if (!logsError && logsData) {
+                            const uniqueIds = new Set(logsData.map(row => row.student_id));
+                            updateStatsDisplay(payload.new.total_searches, uniqueIds.size, 0);
+                        } else {
+                            updateStatsDisplay(payload.new.total_searches, statsState.valid, 0);
+                        }
+                    } catch (err) {
+                        console.log('Error fetching unique IDs:', err);
+                        updateStatsDisplay(payload.new.total_searches, statsState.valid, 0);
+                    }
                 }
             }
         )
@@ -380,7 +405,7 @@ async function performFetch(id) {
         if (record) {
             // Log valid search
             logSearch(id, true);
-            
+
             // Parse Phase 1 date
             const phase1DateObj = parseDbDate(record.phase1Date);
             const phase1DayOfWeek = phase1DateObj.toLocaleDateString('en-US', { weekday: 'long' });
@@ -418,7 +443,7 @@ async function performFetch(id) {
         } else {
             // Log invalid search
             logSearch(id, false);
-            
+
             state.error = 'Advising data not found for you.';
             state.data = null;
         }
@@ -437,11 +462,11 @@ async function performFetch(id) {
 async function logSearch(studentId, isValid) {
     try {
         // Log to search logs table
-        await supabase.rpc('log_advising_search', { 
-            p_student_id: studentId, 
-            p_found: isValid 
+        await supabase.rpc('log_advising_search', {
+            p_student_id: studentId,
+            p_found: isValid
         });
-        
+
         // Increment counters
         const functionName = isValid ? 'increment_valid_search' : 'increment_invalid_search';
         await supabase.rpc(functionName);
@@ -1663,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check database connection
     checkDatabaseStatus();
-    
+
     // Initialize stats - fetch initial data and subscribe to real-time updates
     fetchInitialStats();
     subscribeToStats();
